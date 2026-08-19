@@ -1,6 +1,8 @@
 package com.example.exercicio1_100826;
 
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -20,14 +22,21 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
+    private Button btnVoltar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        btnVoltar = findViewById(R.id.btnVoltar);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        // Listener do botão de voltar para recarregar a lista de estados
+        btnVoltar.setOnClickListener(v -> carregarEstados());
+
+        // Carregamento inicial ao abrir a tela
         carregarEstados();
     }
 
@@ -40,10 +49,15 @@ public class MainActivity extends AppCompatActivity {
 
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
-                    estados.add(new Item(obj.getInt("id"), obj.getString("nome")));
+                    int id = obj.getInt("id");
+                    String nomeEstado = obj.getString("nome");
+                    String regiao = obj.getJSONObject("regiao").getString("nome");
+
+                    estados.add(new Item(id, nomeEstado, "Região: " + regiao));
                 }
 
                 runOnUiThread(() -> {
+                    btnVoltar.setVisibility(View.GONE);
                     recyclerView.setAdapter(new ItemAdapter(estados, estado -> carregarCidades(estado.id)));
                 });
             } catch (Exception e) {
@@ -61,9 +75,17 @@ public class MainActivity extends AppCompatActivity {
 
                 for (int i = 0; i < array.length(); i++) {
                     JSONObject obj = array.getJSONObject(i);
-                    cidades.add(new Item(obj.getInt("id"), obj.getString("nome")));
+                    int id = obj.getInt("id");
+                    String nomeCidade = obj.getString("nome");
+                    String microrregiao = obj.getJSONObject("microrregiao").getString("nome");
+                    String regiaoImediata = obj.getJSONObject("regiao-imediata").getString("nome");
+
+                    String detalhes = "Microrregião: " + microrregiao + " | Reg. Imediata: " + regiaoImediata;
+                    cidades.add(new Item(id, nomeCidade, detalhes));
                 }
+
                 runOnUiThread(() -> {
+                    btnVoltar.setVisibility(View.VISIBLE);
                     recyclerView.setAdapter(new ItemAdapter(cidades, null));
                 });
             } catch (Exception e) {
@@ -77,13 +99,17 @@ public class MainActivity extends AppCompatActivity {
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("GET");
 
-        BufferedReader buffer = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        StringBuilder resposta = new StringBuilder();
-        String linha;
-        while ((linha = buffer.readLine()) != null) {
-            resposta.append(linha);
+        try {
+            InputStreamReader inputStreamReader = new InputStreamReader(con.getInputStream());
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            StringBuilder resposta = new StringBuilder();
+            String linha;
+            while ((linha = bufferedReader.readLine()) != null) {
+                resposta.append(linha);
+            }
+            return resposta.toString();
+        } finally {
+            con.disconnect();
         }
-        con.disconnect();
-        return resposta.toString();
     }
 }
